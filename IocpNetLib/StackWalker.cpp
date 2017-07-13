@@ -71,6 +71,7 @@
  *   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  **********************************************************************/
+#define _WINSOCKAPI_
 #include <windows.h>
 #include <tchar.h>
 #include <stdio.h>
@@ -430,7 +431,7 @@ public:
 */
 
 #pragma pack(push,8)
-typedef struct IMAGEHLP_MODULE64_V2 {
+struct IMAGEHLP_MODULE64_V2 {
     DWORD    SizeOfStruct;           // set to sizeof(IMAGEHLP_MODULE64)
     DWORD64  BaseOfImage;            // base load address of module
     DWORD    ImageSize;              // virtual size of the loaded module

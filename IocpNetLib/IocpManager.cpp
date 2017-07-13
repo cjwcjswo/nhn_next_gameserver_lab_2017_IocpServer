@@ -12,7 +12,7 @@
 IocpManager* GIocpManager = nullptr;
 
 //LPFN_DISCONNECTEX IocpManager::mFnDisconnectEx = nullptr;
-//LPFN_ACCEPTEX IocpManager::mFnAcceptEx = nullptr;
+LPFN_ACCEPTEX IocpManager::mFnAcceptEx = nullptr;
 LPFN_CONNECTEX IocpManager::mFnConnectEx = nullptr;
 
 char IocpManager::mAcceptBuf[64] = { 0, };
@@ -23,13 +23,13 @@ char IocpManager::mAcceptBuf[64] = { 0, };
 //	return IocpManager::mFnDisconnectEx(hSocket, lpOverlapped, dwFlags, reserved);
 //}
 //
-//BOOL AcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, PVOID lpOutputBuffer, DWORD dwReceiveDataLength,
-//	DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped)
-//{
-//	return IocpManager::mFnAcceptEx(sListenSocket, sAcceptSocket, lpOutputBuffer, dwReceiveDataLength,
-//		dwLocalAddressLength, dwRemoteAddressLength, lpdwBytesReceived, lpOverlapped);
-//}
-//
+BOOL AcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, PVOID lpOutputBuffer, DWORD dwReceiveDataLength,
+	DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped)
+{
+	return IocpManager::mFnAcceptEx(sListenSocket, sAcceptSocket, lpOutputBuffer, dwReceiveDataLength,
+		dwLocalAddressLength, dwRemoteAddressLength, lpdwBytesReceived, lpOverlapped);
+}
+
 BOOL ConnectEx(SOCKET hSocket, const struct sockaddr* name, int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength, LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped)
 {
 	return IocpManager::mFnConnectEx(hSocket, name, namelen, lpSendBuffer, dwSendDataLength, lpdwBytesSent, lpOverlapped);
@@ -112,9 +112,11 @@ bool IocpManager::StartIoThreads()
 	/// create I/O Thread
 	for (int i = 0; i < MAX_IO_THREAD; ++i)
 	{
-		DWORD dwThreadId;
+		unsigned __int64 threadIndex = i;
+		DWORD dwThreadId = 0;
+
 		/// 스레드ID는 DB 스레드 이후에 IO 스레드로..
-		HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, IoWorkerThread, (LPVOID)(i+MAX_DB_THREAD), CREATE_SUSPENDED, (unsigned int*)&dwThreadId);
+		HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, IoWorkerThread, (PVOID)threadIndex, CREATE_SUSPENDED, (unsigned int*)&dwThreadId);
 		if (hThread == NULL) {
 			return false;
 		}
@@ -166,11 +168,6 @@ void IocpManager::Finalize()
 
 unsigned int WINAPI IocpManager::IoWorkerThread(LPVOID lpParam)
 {
-	int LWorkerThreadId = reinterpret_cast<int>(lpParam);
-	//LSendRequestSessionList = new std::deque<Session*>;
-	
-	/// 반드시 DB 쓰레드를 먼저 띄운 후에 진입해야 한다.
-	CRASH_ASSERT(LWorkerThreadId >= MAX_DB_THREAD);
-
-	return GIocpManager->mIoWorkerThread[LWorkerThreadId-MAX_DB_THREAD]->Run();
+	auto LWorkerThreadId = reinterpret_cast<unsigned __int64>(lpParam);	
+	return GIocpManager->mIoWorkerThread[LWorkerThreadId]->Run();
 }

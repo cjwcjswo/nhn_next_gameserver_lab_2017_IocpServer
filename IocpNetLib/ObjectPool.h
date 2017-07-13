@@ -6,7 +6,7 @@
 
 template <class TOBJECT, int ALLOC_COUNT = 100>
 class ObjectPool : public ClassTypeLock<TOBJECT>
-{
+{	
 public:
 // 	ObjectPool()
 // 	{
@@ -15,29 +15,31 @@ public:
 
 	static void* operator new(size_t objSize)
 	{
+		using uint8_t = unsigned char;
+
 		LockGuard criticalSection;
 
 		if (!mFreeList)
 		{
-			mFreeList = new uint8_t[sizeof(TOBJECT)*ALLOC_COUNT];
+			mFreeList = new unsigned char[sizeof(TOBJECT)*ALLOC_COUNT];
 
-			uint8_t* pNext = mFreeList;
-			uint8_t** ppCurr = reinterpret_cast<uint8_t**>(mFreeList);
+			auto* pNext = mFreeList;
+			auto ppCurr = reinterpret_cast<unsigned char**>(mFreeList);
 
 			for (int i = 0; i < ALLOC_COUNT - 1; ++i)
 			{
 				/// OBJECT의 크기가 반드시 포인터 크기보다 커야 한다
 				pNext += sizeof(TOBJECT);
 				*ppCurr = pNext;
-				ppCurr = reinterpret_cast<uint8_t**>(pNext);
+				ppCurr = reinterpret_cast<unsigned char**>(pNext);
 			}
 
 			*ppCurr = 0; ///< 마지막은 0으로 표시
 			mTotalAllocCount += ALLOC_COUNT;
 		}
 
-		uint8_t* pAvailable = mFreeList;
-		mFreeList = *reinterpret_cast<uint8_t**>(pAvailable);
+		auto* pAvailable = mFreeList;
+		mFreeList = *reinterpret_cast<unsigned char**>(pAvailable);
 		++mCurrentUseCount;
 
 		return pAvailable;
@@ -51,13 +53,13 @@ public:
 
 		--mCurrentUseCount;
 
-		*reinterpret_cast<uint8_t**>(obj) = mFreeList;
-		mFreeList = static_cast<uint8_t*>(obj);
+		*reinterpret_cast<unsigned char**>(obj) = mFreeList;
+		mFreeList = static_cast<unsigned char*>(obj);
 	}
 
 
 private:
-	static uint8_t*	mFreeList;
+	static unsigned char*	mFreeList;
 	static int		mTotalAllocCount; ///< for tracing
 	static int		mCurrentUseCount; ///< for tracing
 
@@ -65,7 +67,7 @@ private:
 
 
 template <class TOBJECT, int ALLOC_COUNT>
-uint8_t* ObjectPool<TOBJECT, ALLOC_COUNT>::mFreeList = nullptr;
+unsigned char* ObjectPool<TOBJECT, ALLOC_COUNT>::mFreeList = nullptr;
 
 template <class TOBJECT, int ALLOC_COUNT>
 int ObjectPool<TOBJECT, ALLOC_COUNT>::mTotalAllocCount = 0;

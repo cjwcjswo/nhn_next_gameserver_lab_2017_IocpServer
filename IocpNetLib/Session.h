@@ -22,7 +22,7 @@ public:
 	void SendCompletion(DWORD transferred) ;
 	void RecvCompletion(DWORD transferred) ;
 		
-	virtual void OnReceive(size_t len) {}
+	virtual void OnReceive(size_t len);
 	virtual void OnDisconnect() {}
 	virtual void OnRelease() {}
 
@@ -32,7 +32,7 @@ public:
 	void EchoBack();
 
 	bool GetDisconnectReason() { return m_DisconnectReason; }
-	bool SetDisconnectReason(DisconnectReason dr) { m_DisconnectReason = dr; }
+	bool SetDisconnectReason(DisconnectReason dr);
 
 protected:
 

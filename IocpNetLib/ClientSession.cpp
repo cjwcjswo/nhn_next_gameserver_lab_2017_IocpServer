@@ -1,5 +1,6 @@
 #include <WinSock2.h>
 #include <Mswsock.h>
+#include <Ws2tcpip.h>
 
 #include "ContentsConfig.h"
 #include "Exception.h"
@@ -132,7 +133,9 @@ void ClientSession::AcceptCompletion()
 		return;
 	}
 
-	printf_s("[DEBUG] Client Connected: IP=%s, PORT=%d\n", inet_ntoa(mClientAddr.sin_addr), ntohs(mClientAddr.sin_port));
+	char clientIP[32] = { 0, };
+	inet_ntop(AF_INET, &(mClientAddr.sin_addr), clientIP, 32 - 1);
+	printf_s("[DEBUG] Client Connected: IP=%s, PORT=%d\n", clientIP, ntohs(mClientAddr.sin_port));
 
 	if (false == PostRecv())
 	{
@@ -152,7 +155,9 @@ void ClientSession::OnDisconnect()
 {
 	auto dr = GetDisconnectReason();
 
-	printf_s("[DEBUG] Client Disconnected: Reason=%d IP=%s, PORT=%d \n", dr, inet_ntoa(mClientAddr.sin_addr), ntohs(mClientAddr.sin_port));
+	char clientIP[32] = { 0, };
+	inet_ntop(AF_INET, &(mClientAddr.sin_addr), clientIP, 32 - 1);
+	printf_s("[DEBUG] Client Disconnected: Reason=%d IP=%s, PORT=%d \n", dr, clientIP, ntohs(mClientAddr.sin_port));
 }
 
 void ClientSession::OnRelease()

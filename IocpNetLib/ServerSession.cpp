@@ -1,5 +1,6 @@
 #include <WinSock2.h>
 #include <Mswsock.h>
+#include <Ws2tcpip.h>
 #include <stdio.h>
 
 #include "ContentsConfig.h"
@@ -34,8 +35,8 @@ bool ServerSession::ConnectRequest()
 	SOCKADDR_IN serverSockAddr;
 	ZeroMemory(&serverSockAddr, sizeof(serverSockAddr));
 	serverSockAddr.sin_port = htons(mPort);
-	serverSockAddr.sin_family = AF_INET;
-	serverSockAddr.sin_addr.s_addr = inet_addr(mServerAddr);
+	auto ret = inet_pton(AF_INET, mServerAddr, (void *)&serverSockAddr.sin_addr.s_addr);
+	serverSockAddr.sin_port = htons(mPort);
 
 	if (SOCKET_ERROR == bind(mSocket, (SOCKADDR*)&serverSockAddr, sizeof(serverSockAddr)))
 	{
