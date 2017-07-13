@@ -30,9 +30,10 @@ public:
 	SOCKET* GetListenSocket()  { return &mListenSocket;  }
 
 	static char mAcceptBuf[64];
+
 	//static LPFN_DISCONNECTEX mFnDisconnectEx;
 	//static LPFN_ACCEPTEX mFnAcceptEx;
-	//static LPFN_CONNECTEX mFnConnectEx;
+	static LPFN_CONNECTEX mFnConnectEx;
 
 private:
 
@@ -56,5 +57,5 @@ extern IocpManager* GIocpManager;
 //BOOL AcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, PVOID lpOutputBuffer, DWORD dwReceiveDataLength,
 //	DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped);
 //
-//BOOL ConnectEx(SOCKET hSocket, const struct sockaddr* name, int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength,
-//	LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped);
+BOOL ConnectEx(SOCKET hSocket, const struct sockaddr* name, int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength,
+	LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped);

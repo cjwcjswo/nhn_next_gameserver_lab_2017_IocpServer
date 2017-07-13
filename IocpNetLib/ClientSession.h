@@ -17,8 +17,8 @@ public:
 	bool PostAccept();
 	void AcceptCompletion();
 	
-	virtual void OnReceive(size_t len);
-	virtual void OnDisconnect(DisconnectReason dr);
+	virtual void OnReceive(size_t len) {}
+	virtual void OnDisconnect();
 	virtual void OnRelease();
 
 public:

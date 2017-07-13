@@ -19,11 +19,16 @@ ClientSessionManager::~ClientSessionManager()
 void ClientSessionManager::PrepareClientSessions()
 {
 
-	for (int i = 0; i < MAX_CONNECTION; ++i)
+	m_MaxSessionCount = MAX_CONNECTION;
+
+	for (int i = 0; i < m_MaxSessionCount; ++i)
 	{
 		ClientSession* client = new ClientSession();
 			
 		mFreeSessionList.push_back(client);
+
+
+		m_SessionList.push_back(client);
 	}
 }
 
@@ -44,19 +49,27 @@ bool ClientSessionManager::AcceptClientSessions()
 {
 	FastSpinlockGuard guard(mLock);
 
-	while (mCurrentIssueCount - mCurrentReturnCount < MAX_CONNECTION)
+	while (mCurrentIssueCount - mCurrentReturnCount < m_MaxSessionCount)
 	{
 		ClientSession* newClient = mFreeSessionList.back();
 		mFreeSessionList.pop_back();
 
 		++mCurrentIssueCount;
 
-		newClient->AddRef(); ///< refcount +1 for issuing 
-		
-		if (false == newClient->PostAccept())
+		if (false == newClient->PostAccept()) {
 			return false;
+		}
 	}
 
 
 	return true;
+}
+
+ClientSession* ClientSessionManager::GetClientSession(const int index)
+{
+	if (index < 0 || index >= m_MaxSessionCount) {
+		return nullptr;
+	}
+
+	return m_SessionList[index];
 }

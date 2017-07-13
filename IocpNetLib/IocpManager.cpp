@@ -13,7 +13,7 @@ IocpManager* GIocpManager = nullptr;
 
 //LPFN_DISCONNECTEX IocpManager::mFnDisconnectEx = nullptr;
 //LPFN_ACCEPTEX IocpManager::mFnAcceptEx = nullptr;
-//LPFN_CONNECTEX IocpManager::mFnConnectEx = nullptr;
+LPFN_CONNECTEX IocpManager::mFnConnectEx = nullptr;
 
 char IocpManager::mAcceptBuf[64] = { 0, };
 
@@ -30,10 +30,10 @@ char IocpManager::mAcceptBuf[64] = { 0, };
 //		dwLocalAddressLength, dwRemoteAddressLength, lpdwBytesReceived, lpOverlapped);
 //}
 //
-//BOOL ConnectEx(SOCKET hSocket, const struct sockaddr* name, int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength, LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped)
-//{
-//	return IocpManager::mFnConnectEx(hSocket, name, namelen, lpSendBuffer, dwSendDataLength, lpdwBytesSent, lpOverlapped);
-//}
+BOOL ConnectEx(SOCKET hSocket, const struct sockaddr* name, int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength, LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped)
+{
+	return IocpManager::mFnConnectEx(hSocket, name, namelen, lpSendBuffer, dwSendDataLength, lpdwBytesSent, lpOverlapped);
+}
 
 IocpManager::IocpManager() : mCompletionPort(NULL), mListenSocket(NULL)
 {
@@ -93,11 +93,12 @@ bool IocpManager::Initialize()
 	if (SOCKET_ERROR == WSAIoctl(mListenSocket, SIO_GET_EXTENSION_FUNCTION_POINTER,
 		&guidAcceptEx, sizeof(GUID), &mFnAcceptEx, sizeof(LPFN_ACCEPTEX), &bytes, NULL, NULL))
 		return false;
-	
+	*/
+	DWORD bytes = 0;
 	GUID guidConnectEx = WSAID_CONNECTEX;
 	if (SOCKET_ERROR == WSAIoctl(mListenSocket, SIO_GET_EXTENSION_FUNCTION_POINTER,
 		&guidConnectEx, sizeof(GUID), &mFnConnectEx, sizeof(LPFN_CONNECTEX), &bytes, NULL, NULL))
-		return false;*/
+		return false;
 
 	/// make session pool
 	GClientSessionManager->PrepareClientSessions();
@@ -114,10 +115,12 @@ bool IocpManager::StartIoThreads()
 		DWORD dwThreadId;
 		/// 스레드ID는 DB 스레드 이후에 IO 스레드로..
 		HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, IoWorkerThread, (LPVOID)(i+MAX_DB_THREAD), CREATE_SUSPENDED, (unsigned int*)&dwThreadId);
-		if (hThread == NULL)
+		if (hThread == NULL) {
 			return false;
+		}
 
 		mIoWorkerThread[i] = new IOThread(hThread, mCompletionPort);
+		mIoWorkerThread[i]->SetManagedSendIOClientSessionIndex(GClientSessionManager->MaxClientSessionCount(), i, MAX_IO_THREAD);
 	}
 
 	/// start!

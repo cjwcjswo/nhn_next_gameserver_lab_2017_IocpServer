@@ -13,7 +13,6 @@ public:
 
 	void DisconnectRequest(DisconnectReason dr) ;
 
-	//bool PreRecv(); ///< zero byte recv
 	bool PostRecv() ;
 
 	bool PostSend(const char* data, size_t len);
@@ -22,12 +21,9 @@ public:
 	void DisconnectCompletion(DisconnectReason dr) ;
 	void SendCompletion(DWORD transferred) ;
 	void RecvCompletion(DWORD transferred) ;
-
-	void AddRef();
-	void ReleaseRef();
-
+		
 	virtual void OnReceive(size_t len) {}
-	virtual void OnDisconnect(DisconnectReason dr) {}
+	virtual void OnDisconnect() {}
 	virtual void OnRelease() {}
 
 	void	SetSocket(SOCKET sock) { mSocket = sock; }
@@ -35,16 +31,22 @@ public:
 
 	void EchoBack();
 
+	bool GetDisconnectReason() { return m_DisconnectReason; }
+	bool SetDisconnectReason(DisconnectReason dr) { m_DisconnectReason = dr; }
+
 protected:
 
 	SOCKET			mSocket;
 
 	CircularBuffer	mRecvBuffer;
 	CircularBuffer	mSendBuffer;
-	FastSpinlock	mSendBufferLock;
+	FastSpinlock	mSessionLock;
 	int				mSendPendingCount;
 
 	volatile long	mRefCount;
 	volatile long	mConnected;
+
+
+	DisconnectReason m_DisconnectReason = DisconnectReason::DR_NONE;
 
 };

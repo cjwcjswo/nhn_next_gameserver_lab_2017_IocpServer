@@ -101,10 +101,10 @@ void ServerSession::ConnectCompletion()
 		CRASH_ASSERT(false);
 	}
 
-	if (false == PreRecv())
+	if (false == PostRecv())
 	{
 		printf_s("[DEBUG] PreRecv for Server Connection error: %d\n", GetLastError());
-		InterlockedExchange(&mConnected, 0);
+		DisconnectCompletion(DR_CONNECT_ERROR);
 		return;
 	}
 

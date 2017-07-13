@@ -19,52 +19,23 @@ Session::Session(size_t sendBufSize, size_t recvBufSize)
 
 void Session::DisconnectRequest(DisconnectReason dr)
 {
-	/// 이미 끊겼거나 끊기는 중이거나
+	SetDisconnectReason(dr);	
+	closesocket(mSocket);
+}
+
+void Session::DisconnectCompletion(DisconnectReason dr)
+{
 	if (0 == InterlockedExchange(&mConnected, 0)) {
 		return;
 	}
-
+		
+	SetDisconnectReason(dr);
 	closesocket(mSocket);
-	/*OverlappedDisconnectContext* context = new OverlappedDisconnectContext(this, dr);
 
-	if (FALSE == DisonnectEx(mSocket, (LPWSAOVERLAPPED)context, TF_REUSE_SOCKET, 0))
-	{
-		if (WSAGetLastError() != WSA_IO_PENDING)
-		{
-			DeleteIoContext(context);
-			printf_s("Session::DisconnectRequest Error : %d\n", GetLastError());
-		}
-	}*/
-	//TODO: 여기서 바로 끊도록 한다
+	OnDisconnect(); // 이것은 여기서 호출하지 말고 패킷 처리하는 곳에서 하는 것이 좋다.
+
+	OnRelease();
 }
-
-
-//bool Session::PreRecv()
-//{
-//	if (!IsConnected()) {
-//		return false;
-//	}
-//
-//	OverlappedPreRecvContext* recvContext = new OverlappedPreRecvContext(this);
-//
-//	DWORD recvbytes = 0;
-//	DWORD flags = 0;
-//	recvContext->mWsaBuf.len = 0;
-//	recvContext->mWsaBuf.buf = nullptr;
-//
-//	/// start async recv
-//	if (SOCKET_ERROR == WSARecv(mSocket, &recvContext->mWsaBuf, 1, &recvbytes, &flags, (LPWSAOVERLAPPED)recvContext, NULL))
-//	{
-//		if (WSAGetLastError() != WSA_IO_PENDING)
-//		{
-//			DeleteIoContext(recvContext);
-//			printf_s("Session::PreRecv Error : %d\n", GetLastError());
-//			return false;
-//		}
-//	}
-//
-//	return true;
-//}
 
 bool Session::PostRecv()
 {
@@ -100,19 +71,19 @@ bool Session::PostRecv()
 
 
 bool Session::PostSend(const char* data, size_t len)
-{
-	if (!IsConnected()) {
+{	
+	FastSpinlockGuard criticalSection(mSessionLock);
+
+	if (!IsConnected()) { 
 		return false;
 	}
-
-	FastSpinlockGuard criticalSection(mSendBufferLock);
 
 	if (mSendBuffer.GetFreeSpaceSize() < len) {
 		return false;
 	}
 
 	/// flush later...
-	LSendRequestSessionList->push_back(this);
+	//LSendRequestSessionList->push_back(this);
 	
 	char* destData = mSendBuffer.GetBuffer();
 
@@ -126,14 +97,17 @@ bool Session::PostSend(const char* data, size_t len)
 
 bool Session::FlushSend()
 {
-	if (!IsConnected())
-	{
-		DisconnectRequest(DR_SENDFLUSH_ERROR);
-		return true;
+	if (!IsConnected()) {
+		return false;
 	}
 		
 
-	FastSpinlockGuard criticalSection(mSendBufferLock);
+	FastSpinlockGuard criticalSection(mSessionLock);
+
+	if (!IsConnected()) // 동기화를 위해 한번 더 조사한다.
+	{
+		return false;
+	}
 
 	/// 보낼 데이터가 없는 경우
 	if (0 == mSendBuffer.GetContiguiousBytes())
@@ -178,22 +152,23 @@ bool Session::FlushSend()
 	return mSendPendingCount == 1;
 }
 
-void Session::DisconnectCompletion(DisconnectReason dr)
-{
-	OnDisconnect(dr);
-
-	/// release refcount when added at issuing a session
-	ReleaseRef();
-}
-
-
 void Session::SendCompletion(DWORD transferred)
 {
-	FastSpinlockGuard criticalSection(mSendBufferLock);
+	FastSpinlockGuard criticalSection(mSessionLock);
+
+	if (!IsConnected()){
+		return;
+	}
 
 	mSendBuffer.Remove(transferred);
 
 	mSendPendingCount--;
+}
+
+void Session::OnReceive(size_t len)
+{
+	// mRecvBuffer.GetBufferStart(), mRecvBuffer.GetContiguiousBytes(), mRecvBuffer.Remove
+	EchoBack();
 }
 
 void Session::RecvCompletion(DWORD transferred)
@@ -201,22 +176,6 @@ void Session::RecvCompletion(DWORD transferred)
 	mRecvBuffer.Commit(transferred);
 
 	OnReceive(transferred);
-}
-
-void Session::AddRef()
-{
-	CRASH_ASSERT(InterlockedIncrement(&mRefCount) > 0);
-}
-
-void Session::ReleaseRef()
-{
-	long ret = InterlockedDecrement(&mRefCount);
-	CRASH_ASSERT(ret >= 0);
-
-	if (ret == 0)
-	{
-		OnRelease();
-	}
 }
 
 void Session::EchoBack()
@@ -235,3 +194,12 @@ void Session::EchoBack()
 
 }
 
+bool Session::SetDisconnectReason(DisconnectReason dr)
+{
+	if (m_DisconnectReason == DisconnectReason::DR_NONE) {
+		m_DisconnectReason = dr;
+		return true;
+	}
+
+	return false;
+}

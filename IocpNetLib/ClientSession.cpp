@@ -23,16 +23,15 @@ ClientSession::~ClientSession()
 
 void ClientSession::SessionReset()
 {
+	FastSpinlockGuard criticalSection(mSessionLock);
+
 	mConnected = 0;
 	mRefCount = 0;
 	memset(&mClientAddr, 0, sizeof(SOCKADDR_IN));
 
 	mRecvBuffer.BufferReset();
-
-	mSendBufferLock.EnterLock();
 	mSendBuffer.BufferReset();
-	mSendBufferLock.LeaveLock();
-
+	
 	LINGER lingerOption;
 	lingerOption.l_onoff = 1;
 	lingerOption.l_linger = 0;
@@ -42,9 +41,10 @@ void ClientSession::SessionReset()
 	{
 		printf_s("[DEBUG] setsockopt linger option error: %d\n", GetLastError());
 	}
-	closesocket(mSocket);
-
+	
 	mSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+
+	m_DisconnectReason = DisconnectReason::DR_NONE;
 
 	mPlayer.PlayerReset();
 }
@@ -128,7 +128,7 @@ void ClientSession::AcceptCompletion()
 
 	if (!resultOk)
 	{
-		DisconnectRequest(DR_ONCONNECT_ERROR);
+		DisconnectCompletion(DR_ONCONNECT_ERROR);
 		return;
 	}
 
@@ -148,47 +148,10 @@ void ClientSession::AcceptCompletion()
  	//mPlayer.RequestLoad(id);
 }
 
-void ClientSession::OnReceive(size_t len)
+void ClientSession::OnDisconnect()
 {
-	/// 패킷 파싱하고 처리
-	/*protobuf::io::ArrayInputStream arrayInputStream(mRecvBuffer.GetBufferStart(), mRecvBuffer.GetContiguiousBytes());
-	protobuf::io::CodedInputStream codedInputStream(&arrayInputStream);
+	auto dr = GetDisconnectReason();
 
-	PacketHeader packetheader;
-
-	while (codedInputStream.ReadRaw(&packetheader, HEADER_SIZE))
-	{
-	const void* payloadPos = nullptr;
-	int payloadSize = 0;
-
-	codedInputStream.GetDirectBufferPointer(&payloadPos, &payloadSize);
-
-	if ( payloadSize < packetheader.mSize ) ///< 패킷 본체 사이즈 체크
-	break;
-
-	if (packetheader.mType >= MAX_PKT_TYPE || packetheader.mType <= 0)
-	{
-	DisconnectRequest(DR_ACTIVE);
-	break;;
-	}
-
-	/// payload 읽기
-	protobuf::io::ArrayInputStream payloadArrayStream(payloadPos, packetheader.mSize);
-	protobuf::io::CodedInputStream payloadInputStream(&payloadArrayStream);
-
-	/// packet dispatch...
-	HandlerTable[packetheader.mType](this, packetheader, payloadInputStream);
-
-	/// 읽은 만큼 전진 및 버퍼에서 제거
-	codedInputStream.Skip(packetheader.mSize); ///< readraw에서 헤더 크기만큼 미리 전진했기때문
-	mRecvBuffer.Remove(HEADER_SIZE + packetheader.mSize);
-
-	}*/
-}
-
-
-void ClientSession::OnDisconnect(DisconnectReason dr)
-{
 	printf_s("[DEBUG] Client Disconnected: Reason=%d IP=%s, PORT=%d \n", dr, inet_ntoa(mClientAddr.sin_addr), ntohs(mClientAddr.sin_port));
 }
 

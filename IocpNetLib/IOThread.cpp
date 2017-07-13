@@ -5,9 +5,11 @@
 #include "IOThread.h"
 #include "ClientSession.h"
 #include "ServerSession.h"
+#include "ClientSessionManager.h"
 #include "IocpManager.h"
 
-IOThread::IOThread(HANDLE hThread, HANDLE hCompletionPort) : mThreadHandle(hThread), mCompletionPort(hCompletionPort)
+IOThread::IOThread(HANDLE hThread, HANDLE hCompletionPort) 
+	: mThreadHandle(hThread), mCompletionPort(hCompletionPort)
 {
 }
 
@@ -25,11 +27,23 @@ DWORD IOThread::Run()
 		DoIocpJob();
 
 		DoSendJob(); ///< aggregated sends
-
-		//... ...
 	}
 
 	return 1;
+}
+
+void IOThread::SetManagedSendIOClientSessionIndex(const int maxClientSessionCount, const int thisThreadIndex, const int maxThreadCount)
+{
+	auto averCount = (int)(maxClientSessionCount / maxThreadCount);
+	
+	m_SendIOClientSessionBeginIndex = averCount * thisThreadIndex;
+	m_SendIOClientSessionEndIndex = m_SendIOClientSessionBeginIndex + averCount;
+
+	if (thisThreadIndex == (maxThreadCount - 1)) 
+	{
+		auto restCount = (int)(maxClientSessionCount % maxThreadCount);
+		m_SendIOClientSessionEndIndex += restCount;
+	}
 }
 
 void IOThread::DoIocpJob()
@@ -49,8 +63,9 @@ void IOThread::DoIocpJob()
 	if (ret == 0 || dwTransferred == 0)
 	{
 		/// check time out first 
-		if ( context == nullptr && GetLastError() == WAIT_TIMEOUT)
+		if (context == nullptr && GetLastError() == WAIT_TIMEOUT) {
 			return;
+		}
 
 	
 		if (context->mIoType == IO_RECV || context->mIoType == IO_SEND)
@@ -58,11 +73,9 @@ void IOThread::DoIocpJob()
 			CRASH_ASSERT(nullptr != remote);
 
 			/// In most cases in here: ERROR_NETNAME_DELETED(64)
-
-			remote->DisconnectRequest(DR_COMPLETION_ERROR);
+			remote->DisconnectCompletion(static_cast<OverlappedDisconnectContext*>(context)->mDisconnectReason);
 
 			DeleteIoContext(context);
-
 			return;
 		}
 	}
@@ -76,12 +89,7 @@ void IOThread::DoIocpJob()
 		dynamic_cast<ServerSession*>(remote)->ConnectCompletion();
 		completionOk = true;
 		break;
-
-	case IO_DISCONNECT:
-		remote->DisconnectCompletion(static_cast<OverlappedDisconnectContext*>(context)->mDisconnectReason);
-		completionOk = true;
-		break;
-
+	
 	case IO_ACCEPT:
 		dynamic_cast<ClientSession*>(remote)->AcceptCompletion();
 		completionOk = true;
@@ -107,9 +115,9 @@ void IOThread::DoIocpJob()
 		remote->RecvCompletion(dwTransferred);
 	
 		/// for test
-		remote->EchoBack();
+		//remote->EchoBack();
 		
-		completionOk = remote->PreRecv();
+		completionOk = remote->PostRecv();
 
 		break;
 
@@ -122,7 +130,7 @@ void IOThread::DoIocpJob()
 	if (!completionOk)
 	{
 		/// connection closing
-		remote->DisconnectRequest(DR_IO_REQUEST_ERROR);
+		remote->DisconnectCompletion(DR_IO_REQUEST_ERROR);
 	}
 
 	DeleteIoContext(context);
@@ -132,15 +140,15 @@ void IOThread::DoIocpJob()
 
 void IOThread::DoSendJob()
 {
-	while (!LSendRequestSessionList->empty())
+	for (int i = m_SendIOClientSessionBeginIndex; i < m_SendIOClientSessionEndIndex; ++i)
 	{
-		auto& session = LSendRequestSessionList->front();
-	
-		if (session->FlushSend())
-		{
-			/// true 리턴 되면 빼버린다.
-			LSendRequestSessionList->pop_front();
+		auto session = GClientSessionManager->GetClientSession(i);
+
+		if (session == nullptr) {
+			break;
 		}
+
+		session->FlushSend();		
 	}
 	
 }

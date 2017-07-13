@@ -7,18 +7,16 @@ OverlappedIOContext::OverlappedIOContext(Session* owner, IOType ioType)
 {
 	memset(&mOverlapped, 0, sizeof(OVERLAPPED));
 	memset(&mWsaBuf, 0, sizeof(WSABUF));
-	mSessionObject->AddRef();
 }
 
 
 
 void DeleteIoContext(OverlappedIOContext* context)
 {
-	if (nullptr == context)
+	if (nullptr == context) {
 		return;
-
-	context->mSessionObject->ReleaseRef();
-
+	}
+	
 	/// ObjectPool's operate delete dispatch
 	switch (context->mIoType)
 	{

@@ -14,9 +14,14 @@ public:
 
 	HANDLE GetHandle() { return mThreadHandle;  }
 	
+	void SetManagedSendIOClientSessionIndex(const int maxClientSessionCount, const int thisThreadIndex, const int maxThreadCount);
+
 private:
 
-	HANDLE mThreadHandle;
-	HANDLE mCompletionPort;
+	HANDLE mThreadHandle = INVALID_HANDLE_VALUE;
+	HANDLE mCompletionPort = INVALID_HANDLE_VALUE;
+
+	int m_SendIOClientSessionBeginIndex = 0;
+	int m_SendIOClientSessionEndIndex = 0;
 };
 

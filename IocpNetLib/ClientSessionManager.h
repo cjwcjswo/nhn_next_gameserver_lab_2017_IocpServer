@@ -1,5 +1,6 @@
 #pragma once
 #include <list>
+#include <vector>
 #include <WinSock2.h>
 
 #include "FastSpinlock.h"
@@ -20,6 +21,10 @@ public:
 	void ReturnClientSession(ClientSession* client);
 
 	
+	int MaxClientSessionCount() { return m_MaxSessionCount;  }
+
+	ClientSession* GetClientSession(const int index);
+
 
 private:
 	typedef std::list<ClientSession*> ClientList;
@@ -29,6 +34,11 @@ private:
 
 	uint64_t mCurrentIssueCount;
 	uint64_t mCurrentReturnCount;
+
+
+	int m_MaxSessionCount = 0;
+
+	std::vector<ClientSession*> m_SessionList;
 };
 
 //TODO: 가능하면 전역으로 사용하지 않기
