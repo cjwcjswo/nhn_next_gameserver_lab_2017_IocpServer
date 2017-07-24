@@ -15,7 +15,7 @@ public:
 	void SessionReset();
 
 	bool PostAccept();
-	void AcceptCompletion();
+	bool AcceptCompletion();
 	
 	virtual void OnReceive(size_t len) {}
 	virtual void OnDisconnect();

@@ -10,7 +10,7 @@ public:
 	virtual ~ServerSession();
 
 	bool ConnectRequest();
-	void ConnectCompletion();
+	bool ConnectCompletion();
 
 
 private:

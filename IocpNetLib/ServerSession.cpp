@@ -66,7 +66,7 @@ bool ServerSession::ConnectRequest()
 	return true;
 }
 
-void ServerSession::ConnectCompletion()
+bool ServerSession::ConnectCompletion()
 {
 	if ( SOCKET_ERROR == setsockopt(mSocket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0) )
 	{
@@ -77,7 +77,7 @@ void ServerSession::ConnectCompletion()
 		else
 			printf_s("SO_UPDATE_CONNECT_CONTEXT failed: %d\n", errCode);
 
-		return;
+		return false;
 	}
 
 	int opt = 1;
@@ -85,7 +85,7 @@ void ServerSession::ConnectCompletion()
 	{
 		printf_s("[DEBUG] TCP_NODELAY error: %d\n", GetLastError());
 		CRASH_ASSERT(false);
-		return;
+		return false;
 	}
 
 	opt = 0;
@@ -93,7 +93,7 @@ void ServerSession::ConnectCompletion()
 	{
 		printf_s("[DEBUG] SO_RCVBUF change error: %d\n", GetLastError());
 		CRASH_ASSERT(false);
-		return;
+		return false;
 	}
 
 
@@ -106,9 +106,10 @@ void ServerSession::ConnectCompletion()
 	{
 		printf_s("[DEBUG] PreRecv for Server Connection error: %d\n", GetLastError());
 		DisconnectCompletion(DR_CONNECT_ERROR);
-		return;
+		return false;
 	}
 
+	return true;
 }
 
 

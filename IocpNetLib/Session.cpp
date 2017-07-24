@@ -28,7 +28,11 @@ void Session::DisconnectCompletion(DisconnectReason dr)
 	if (0 == InterlockedExchange(&mConnected, 0)) {
 		return;
 	}
-		
+	
+	if (mRefCount != 0) {
+		return;
+	}
+
 	SetDisconnectReason(dr);
 	closesocket(mSocket);
 
@@ -202,4 +206,15 @@ bool Session::SetDisconnectReason(DisconnectReason dr)
 	}
 
 	return false;
+}
+
+void Session::AddRef()
+{
+	CRASH_ASSERT(InterlockedIncrement(&mRefCount) > 0);
+}
+
+void Session::ReleaseRef()
+{
+	long ret = InterlockedDecrement(&mRefCount);
+	CRASH_ASSERT(ret >= 0);
 }

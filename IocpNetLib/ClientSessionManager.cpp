@@ -55,10 +55,10 @@ bool ClientSessionManager::AcceptClientSessions()
 		mFreeSessionList.pop_back();
 
 		++mCurrentIssueCount;
-
+		
 		if (false == newClient->PostAccept()) {
 			return false;
-		}
+		}		
 	}
 
 

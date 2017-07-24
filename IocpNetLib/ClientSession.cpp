@@ -73,13 +73,13 @@ bool ClientSession::PostAccept()
 	return true;
 }
 
-void ClientSession::AcceptCompletion()
+bool ClientSession::AcceptCompletion()
 {
 	if (1 == InterlockedExchange(&mConnected, 1))
 	{
 		/// already exists?
 		CRASH_ASSERT(false);
-		return;
+		return false;
 	}
 
 	bool resultOk = true;
@@ -130,8 +130,7 @@ void ClientSession::AcceptCompletion()
 	if (!resultOk)
 	{
 		printf_s("[DEBUG][%s] CreateIoCompletionPort error: %d\n", __FUNCTION__, GetLastError());
-		DisconnectCompletion(DR_ONCONNECT_ERROR);
-		return;
+		return resultOk;
 	}
 
 	char clientIP[32] = { 0, };
@@ -141,6 +140,7 @@ void ClientSession::AcceptCompletion()
 	if (false == PostRecv())
 	{
 		printf_s("[DEBUG][%s] PreRecv error: %d\n", __FUNCTION__, GetLastError());
+		return false;
 	}
 
 
@@ -152,6 +152,8 @@ void ClientSession::AcceptCompletion()
  	//mPlayer.RequestLoad(id);
 
 	printf_s("[DEBUG][%s] Connectd New Session: %I64u\n", __FUNCTION__, mSocket);
+	
+	return true;
 }
 
 void ClientSession::OnDisconnect()

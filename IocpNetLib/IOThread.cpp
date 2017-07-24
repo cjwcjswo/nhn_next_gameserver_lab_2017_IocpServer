@@ -72,10 +72,12 @@ void IOThread::DoIocpJob()
 		{
 			CRASH_ASSERT(nullptr != remote);
 
-			/// In most cases in here: ERROR_NETNAME_DELETED(64)
-			remote->DisconnectCompletion(static_cast<OverlappedDisconnectContext*>(context)->mDisconnectReason);
-
+			auto disconnectReason = static_cast<OverlappedDisconnectContext*>(context)->mDisconnectReason;
 			DeleteIoContext(context);
+
+			/// In most cases in here: ERROR_NETNAME_DELETED(64)
+			remote->DisconnectCompletion(disconnectReason);
+			
 			return;
 		}
 	}
@@ -85,14 +87,16 @@ void IOThread::DoIocpJob()
 	bool completionOk = false;
 	switch (context->mIoType)
 	{
-	case IO_CONNECT:
-		dynamic_cast<ServerSession*>(remote)->ConnectCompletion();
-		completionOk = true;
+	case IO_CONNECT:		
+		completionOk = dynamic_cast<ServerSession*>(remote)->ConnectCompletion();
+
+		// TODO: completionOk가 false인 경우 실패 이유가 설정 되어야 한다. remote->SetDisconnectReason
 		break;
 	
-	case IO_ACCEPT:
-		dynamic_cast<ClientSession*>(remote)->AcceptCompletion();
-		completionOk = true;
+	case IO_ACCEPT:		
+		completionOk = dynamic_cast<ClientSession*>(remote)->AcceptCompletion();
+
+		// TODO: completionOk가 false인 경우 실패 이유가 설정 되어야 한다. remote->SetDisconnectReason
 		break;
 
 	case IO_SEND:
@@ -105,16 +109,15 @@ void IOThread::DoIocpJob()
 			completionOk = true;
 		}
 		
+		// TODO: completionOk가 false인 경우 실패 이유가 설정 되어야 한다. remote->SetDisconnectReason
 		break;
 
 	case IO_RECV:
 		remote->RecvCompletion(dwTransferred);
 	
-		/// for test
-		//remote->EchoBack();
-		
 		completionOk = remote->PostRecv();
 
+		// TODO: completionOk가 false인 경우 실패 이유가 설정 되어야 한다. remote->SetDisconnectReason
 		break;
 
 	default:
@@ -123,14 +126,13 @@ void IOThread::DoIocpJob()
 		break;
 	}
 
+	DeleteIoContext(context);
+
 	if (!completionOk)
 	{
 		/// connection closing
 		remote->DisconnectCompletion(DR_IO_REQUEST_ERROR);
-	}
-
-	DeleteIoContext(context);
-	
+	}	
 }
 
 
