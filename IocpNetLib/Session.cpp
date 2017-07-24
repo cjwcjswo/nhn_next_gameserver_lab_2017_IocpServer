@@ -167,7 +167,7 @@ void Session::SendCompletion(DWORD transferred)
 
 void Session::OnReceive(size_t len)
 {
-	// mRecvBuffer.GetBufferStart(), mRecvBuffer.GetContiguiousBytes(), mRecvBuffer.Remove
+	//TODO: 개발용도. 실제 사용될 때 동작하면 안 된다. mRecvBuffer.GetBufferStart(), mRecvBuffer.GetContiguiousBytes(), mRecvBuffer.Remove
 	EchoBack();
 }
 

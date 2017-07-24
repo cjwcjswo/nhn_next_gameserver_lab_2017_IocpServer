@@ -95,10 +95,6 @@ void IOThread::DoIocpJob()
 		completionOk = true;
 		break;
 
-	/*case IO_RECV_ZERO:
-		completionOk = remote->PostRecv();
-		break;*/
-
 	case IO_SEND:
 		remote->SendCompletion(dwTransferred);
 

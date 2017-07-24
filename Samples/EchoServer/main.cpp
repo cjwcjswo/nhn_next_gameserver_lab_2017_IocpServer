@@ -6,9 +6,15 @@
 #include "ClientSessionManager.h"
 #include "IocpManager.h"
 
+BOOL WINAPI ConsoleCtrlHandler(const DWORD dwCtrlType);
 
 int main()
 {
+	if (SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE) != TRUE) 
+	{
+		return 0;
+	}
+
 	/// for dump on crash
 	SetUnhandledExceptionFilter(ExceptionFilter);
 
@@ -17,12 +23,14 @@ int main()
 	GIocpManager = new IocpManager;
 	
 
-	if (false == GIocpManager->Initialize()) {
+	if (false == GIocpManager->Initialize()) 
+	{
 		std::cout << "Fail GIocpManager->Initialize" << std::endl;
 		return -1;
 	}
 		
-	if (false == GIocpManager->StartIoThreads()) {
+	if (false == GIocpManager->StartIoThreads()) 
+	{
 		std::cout << "Fail GIocpManager->StartIoThreads" << std::endl;
 		return -1;
 	}
@@ -48,4 +56,25 @@ int main()
 	delete GClientSessionManager;
 
 	return 0;
+}
+
+BOOL WINAPI ConsoleCtrlHandler(const DWORD dwCtrlType)
+{
+	BOOL bIsSuccess = TRUE;
+
+	switch (dwCtrlType)
+	{
+	case CTRL_C_EVENT:							
+		break;
+	case CTRL_BREAK_EVENT:							
+		break;
+		//	case CTRL_CLOSE_EVENT	: theServer.StopServer();	break;	// 굳이 할 필요 없다. 소멸자에서 호출됨으로
+	case CTRL_LOGOFF_EVENT:							
+		break;
+	case CTRL_SHUTDOWN_EVENT:							
+		break;
+	default: bIsSuccess = FALSE;
+	}
+
+	return bIsSuccess;
 }

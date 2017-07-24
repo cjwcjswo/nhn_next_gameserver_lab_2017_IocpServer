@@ -26,10 +26,10 @@ void ClientSessionManager::PrepareClientSessions()
 		ClientSession* client = new ClientSession();
 			
 		mFreeSessionList.push_back(client);
-
-
 		m_SessionList.push_back(client);
 	}
+
+	printf_s("[DEBUG][%s] m_MaxSessionCount: %d\n", __FUNCTION__, m_MaxSessionCount);
 }
 
 void ClientSessionManager::ReturnClientSession(ClientSession* client)

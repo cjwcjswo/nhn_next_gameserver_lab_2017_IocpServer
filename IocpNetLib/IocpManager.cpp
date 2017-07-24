@@ -49,18 +49,27 @@ bool IocpManager::Initialize()
 {
 	/// winsock initializing
 	WSADATA wsa;
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
+	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) 
+	{
+		printf_s("[DEBUG] WSAStartup error: %d\n", WSAGetLastError());
 		return false;
+	}
 
 	/// Create I/O Completion Port
 	mCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-	if (mCompletionPort == NULL)
+	if (mCompletionPort == INVALID_HANDLE_VALUE) 
+	{
+		printf_s("[DEBUG] CreateIoCompletionPort error: %d\n", WSAGetLastError());
 		return false;
+	}
 
 	/// create TCP socket
 	mListenSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
-	if (mListenSocket == INVALID_SOCKET)
+	if (mListenSocket == INVALID_SOCKET) 
+	{
+		printf_s("[DEBUG] create TCP socket error: %d\n", WSAGetLastError());
 		return false;
+	}
 
 	HANDLE handle = CreateIoCompletionPort((HANDLE)mListenSocket, mCompletionPort, 0, 0);
 	if (handle != mCompletionPort)
@@ -79,7 +88,9 @@ bool IocpManager::Initialize()
 	serveraddr.sin_port = htons(LISTEN_PORT);
 	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	if (SOCKET_ERROR == bind(mListenSocket, (SOCKADDR*)&serveraddr, sizeof(serveraddr))) {
+	if (SOCKET_ERROR == bind(mListenSocket, (SOCKADDR*)&serveraddr, sizeof(serveraddr))) 
+	{
+		printf_s("[DEBUG] listen socket bind error: %d\n", GetLastError());
 		return false;
 	}
 
@@ -88,21 +99,25 @@ bool IocpManager::Initialize()
 	if (SOCKET_ERROR == WSAIoctl(mListenSocket, SIO_GET_EXTENSION_FUNCTION_POINTER, 
 		&guidDisconnectEx, sizeof(GUID), &mFnDisconnectEx, sizeof(LPFN_DISCONNECTEX), &bytes, NULL, NULL) )
 		return false;
+*/
+	DWORD bytes = 0;
 
 	GUID guidAcceptEx = WSAID_ACCEPTEX ;
 	if (SOCKET_ERROR == WSAIoctl(mListenSocket, SIO_GET_EXTENSION_FUNCTION_POINTER,
-		&guidAcceptEx, sizeof(GUID), &mFnAcceptEx, sizeof(LPFN_ACCEPTEX), &bytes, NULL, NULL))
+		&guidAcceptEx, sizeof(GUID), &mFnAcceptEx, sizeof(LPFN_ACCEPTEX), &bytes, NULL, NULL)) {
 		return false;
-	*/
-	DWORD bytes = 0;
+	}
+	
 	GUID guidConnectEx = WSAID_CONNECTEX;
 	if (SOCKET_ERROR == WSAIoctl(mListenSocket, SIO_GET_EXTENSION_FUNCTION_POINTER,
-		&guidConnectEx, sizeof(GUID), &mFnConnectEx, sizeof(LPFN_CONNECTEX), &bytes, NULL, NULL))
+		&guidConnectEx, sizeof(GUID), &mFnConnectEx, sizeof(LPFN_CONNECTEX), &bytes, NULL, NULL)) {
 		return false;
+	}
 
 	/// make session pool
 	GClientSessionManager->PrepareClientSessions();
 
+	printf_s("[DEBUG][%s] Success\n", __FUNCTION__);
 	return true;
 }
 
@@ -144,11 +159,14 @@ void IocpManager::StartAccept()
 		return;
 	}
 		
+	printf_s("[DEBUG][%s]\n", __FUNCTION__);
+
 	while (GClientSessionManager->AcceptClientSessions())
 	{
-		Sleep(100);
+		Sleep(32);
 	}
 
+	printf_s("[DEBUG][%s] End Thread\n", __FUNCTION__);
 }
 
 
@@ -168,6 +186,9 @@ void IocpManager::Finalize()
 
 unsigned int WINAPI IocpManager::IoWorkerThread(LPVOID lpParam)
 {
-	auto LWorkerThreadId = reinterpret_cast<unsigned __int64>(lpParam);	
+	auto LWorkerThreadId = reinterpret_cast<unsigned __int64>(lpParam);
+
+	printf_s("[DEBUG][%s] LWorkerThreadId: %I64u\n", __FUNCTION__, LWorkerThreadId);
+
 	return GIocpManager->mIoWorkerThread[LWorkerThreadId]->Run();
 }

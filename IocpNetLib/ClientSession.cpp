@@ -129,6 +129,7 @@ void ClientSession::AcceptCompletion()
 
 	if (!resultOk)
 	{
+		printf_s("[DEBUG][%s] CreateIoCompletionPort error: %d\n", __FUNCTION__, GetLastError());
 		DisconnectCompletion(DR_ONCONNECT_ERROR);
 		return;
 	}
@@ -139,7 +140,7 @@ void ClientSession::AcceptCompletion()
 
 	if (false == PostRecv())
 	{
-		printf_s("[DEBUG] PreRecv error: %d\n", GetLastError());
+		printf_s("[DEBUG][%s] PreRecv error: %d\n", __FUNCTION__, GetLastError());
 	}
 
 
@@ -149,6 +150,8 @@ void ClientSession::AcceptCompletion()
 	static int id = 101;
 	++id;
  	//mPlayer.RequestLoad(id);
+
+	printf_s("[DEBUG][%s] Connectd New Session: %I64u\n", __FUNCTION__, mSocket);
 }
 
 void ClientSession::OnDisconnect()
